@@ -1,2 +1,3 @@
 # proyecto-1
-intro a la programación, primer proyecto
+Hola, este es mi primer proyecto de introducción a la programación.
+
