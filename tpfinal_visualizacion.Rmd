@@ -1,0 +1,286 @@
+---
+title: "tp-visualizacion-ariza"
+author: "Andrea Ariza"
+date: "2023-08-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+library(readxl)
+
+library(readxl)
+base_PRO <- read_excel("datos/base_PRO.xlsx")
+View(base_PRO)
+```
+
+```{r}
+base_PRO<- base_PRO|>
+  mutate(mes_anio = paste(mes,año))
+
+print(base_PRO)
+```
+```{r}
+list_tablas_frecuencias <- list()
+categorias <- c("ciudadano", "meritocracia", "diagnostico-actualidad", "sobre-ellos", "sobre-los-otros", "propuestas", "internacional", "politico-partidario", "justicia-seguridad", "vision-de-pais", "obra pública")
+
+for (categoria in categorias) {
+  tabla_frecuencias <- base_PRO %>%
+    filter(.data[[categoria]]== 1)%>%
+    group_by(usuario, año, mes, .data[[categoria]]) %>%
+    summarize(frecuencia = n()) %>%
+    pivot_wider(names_from = .data[[categoria]], values_from = frecuencia, values_fill = 0)
+    colnames(tabla_frecuencias)[4] <-categoria
+  
+  list_tablas_frecuencias[[categoria]] <- tabla_frecuencias
+}
+
+
+for (categoria in categorias) {
+  print(paste("Tabla de frecuencias para", categoria))
+  print(list_tablas_frecuencias[[categoria]])
+  cat("\n")
+}
+```
+
+
+```{r}
+cantidad.publicaciones <-base_PRO|>
+  group_by(usuario, año)|>
+  count()
+
+```
+
+
+```{r}
+grafico.publicaciones <- ggplot(cantidad.publicaciones, aes(x = año, y = n, group = usuario, color = usuario))+
+  geom_line()+
+  geom_point() +
+  labs(title = "Variación de publicaciones por usuario a lo largo de los años",
+       subtitle = "Fuente: elaboración propia",
+       caption = "Total de casos: 14454",
+       x = "Año",
+       y = "publicaciones") +
+  theme_minimal()
+
+
+
+print(grafico.publicaciones)
+```
+categorias_a_exponer= c("sobre-ellos", "sobre-los-otros", "politico-partidario")
+
+for (categoria in categorias_a_exponer) {
+
+ geom_mark_circle(aes(filter = masa_corporal_g == max(masa_corporal_g, na.rm = TRUE),
+                       label = masa_corporal_g))
+}
+
+```{r}
+list_tablas_frecuencias[["politico-partidario"]]|>
+  group_by(año)|>
+  ggplot(aes(mes, `politico-partidario`))+
+  geom_point(aes(color=usuario))+
+  scale_x_continuous(breaks = seq(0, 12, by = 1))+
+  scale_y_continuous(breaks = seq(0, 100, by = 5))
+
+
+```
+
+
+```{r}
+base_PRO|>
+  group_by(usuario, año)|>
+   summarise(across(starts_with("politico-partidario"), sum))|>
+  ggplot(aes(x = año, y = `politico-partidario`, fill = "politico-partidario")) +
+  geom_point() +
+  facet_wrap(~ usuario, ncol = 1) +
+  labs(x = "Año", y = "frecuencia", fill = "politico-partidario") +
+  theme_minimal()
+
+
+
+
+```
+```{r}
+base_PRO|>
+  group_by(usuario, ciudadano, mes_anio)|>
+  count()
+```
+```{r}
+base_PRO$mes <- factor(base_PRO$mes, levels = 1:12)
+anios = c(2015, 2016, 2017, 2018, 2019)
+resultados_por_anio <- list()
+for (anio in anios) {
+  resultados <- base_PRO|>
+    filter(año == anio)|>
+    group_by(usuario, año, mes)|>
+    summarise(ciudadano = sum(ciudadano))
+  nombre_variable <- paste0("resultados", anio)
+  assign(nombre_variable, resultados)
+  resultados_por_anio[[nombre_variable]] <- resultados
+
+}
+```
+```{r}
+anio_registrado = 2015
+for (res in resultados_por_anio) {
+  grafico <- ggplot(res, aes(x = mes, y = ciudadano, group = usuario, color = usuario)) +
+  scale_y_continuous(limits = c(0, 50), breaks = seq(0, 50, by = 5)) +
+  geom_line() +
+  geom_point() +
+  geom_text(aes(label = ciudadano), vjust = -1) +
+  labs(title = paste0("Variación de contenido ciudadano por usuario a lo largo del año ", anio_registrado),
+       x = "Mes",
+       y = "ciudadano") +
+  theme_minimal()
+
+print(grafico)
+anio_registrado = anio_registrado + 1
+}
+```
+```{r}
+meritocracia <- base_PRO|>
+  group_by(usuario, año)|>
+  summarise(`meritocracia` = sum(`meritocracia`))
+print(meritocracia)
+```
+
+
+
+```{r}
+grafico.meritocracia <- ggplot(meritocracia, aes(x = año, y = meritocracia, group = usuario, color = usuario))+
+  geom_line()+
+  geom_point() +
+  labs(title = "Variación de meritocracia por usuario a lo largo de los años",
+       subtitle = "Fuente: elaboración propia",
+       caption = "Total de casos: 14454",
+       x = "Año",
+       y = "meritocracia") +
+   scale_y_continuous(limits = c(0, 250), breaks = seq(0, 250, by = 50)) +
+  theme_minimal()
+
+
+
+print(grafico.meritocracia)
+```
+
+```{r}
+propuestas <- base_PRO|>
+  group_by(usuario, año)|>
+  summarise(`propuestas` = sum(`propuestas`, na.rm = FALSE))
+print(propuestas)
+```
+
+```{r}
+grafico.propuestas <- ggplot(propuestas, aes(x = año, y = propuestas, group = usuario, color = usuario))+
+  geom_line()+
+  geom_point() +
+  labs(title = "Variación de propuestas por usuario a lo largo de los años",
+       x = "Año",
+       y = "propuestas") +
+  theme_minimal()
+
+
+
+print(grafico.propuestas)
+```
+
+```{r}
+
+tabla_categorias|>
+  barplot(tabla_categorias,
+        main = "Gráfico de Barras de Categorías",
+        xlab = "Categorías",
+        ylab = "Frecuencia")
+ 
+```
+
+```{r}
+vision <- base_PRO|>
+  group_by(usuario, año)|>
+  summarise(`vision-de-pais` = sum(`vision-de-pais`))
+print(vision)
+
+
+```
+```{r}
+grafico.vision <- ggplot(vision, aes(x = año, y = `vision-de-pais`, group = usuario, color = usuario))+
+  geom_line()+
+  geom_point() +
+  labs(title = "Variación de visión por usuario a lo largo de los años",
+       x = "Año",
+       y = "vision")+
+  theme_minimal()
+
+
+print(grafico.vision)
+
+```
+
+```{r}
+
+list_tablas_frecuencias_2 <- list()
+categorias <- c("ciudadano", "meritocracia", "diagnostico-actualidad", "sobre-ellos", "sobre-los-otros", "propuestas", "internacional", "politico-partidario", "justicia-seguridad", "vision-de-pais", "obra pública")
+
+for (categoria in categorias) {
+  tabla_frecuencias2 <- base_PRO %>%
+    filter(usuario=="Horacio Rodríguez Larreta", .data[[categoria]]== 1)%>%
+    group_by(.data[[categoria]]) %>%
+    summarize(frecuencia = n()) %>%
+    pivot_wider(names_from = .data[[categoria]], values_from = frecuencia, values_fill = 0)
+    colnames(tabla_frecuencias2)[1] <-categoria
+  
+  list_tablas_frecuencias_2[[categoria]] <- tabla_frecuencias2
+}
+
+```
+
+```{r}
+base_PRO|>
+  filter(usuario == "Horacio Rodríguez Larreta")|>
+  group_by(año)
+  ggplot(aes(x=ciudadano, y =))+
+  geom_bar(stat = "identity")
+```
+
+```{r}
+
+ggplot(tabla_categorias, aes(x= categoria, y = `Mauricio Macri`)) +
+  geom_histogram(binwidth = 10, fill = "skyblue", color = "black") +
+  labs(x = "Categoria", y = "Frecuencia", title = "Histograma de Mauricio Macri")
+```
+
+
+```{r}
+ggplot(tabla_categorias, aes(x = categoria, y = `Mauricio Macri`, fill = categoria)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Categoría", y = "Frecuencia", title = "Frecuencia de Mauricio Macri por Categoría en período 2015-2019") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+ggplot(tabla_categorias, aes(x = categoria, y = `Horacio Rodríguez Larreta`, fill = categoria)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Categoría", y = "Frecuencia", title = "Frecuencia de Horacio Rodríguez Larreta por Categoría en período 2015-2019") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+ggplot(tabla_categorias, aes(x = categoria, y = `María Eugenia Vidal`, fill = categoria)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Categoría", y = "Frecuencia", title = "Frecuencia de María Eugenia Vidal por Categoría en período 2015-2019") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
